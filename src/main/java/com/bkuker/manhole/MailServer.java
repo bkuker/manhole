@@ -1,6 +1,8 @@
 package com.bkuker.manhole;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.ServerSocket;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -58,6 +60,20 @@ public class MailServer extends Thread {
 				add(m);
 			}
 			server.reset();
+
+			try {
+				Field f = server.getClass().getDeclaredField("serverSocket");
+				f.setAccessible(true);
+				ServerSocket ss = (ServerSocket) f.get(server);
+				if (ss.isClosed()) {
+					log.warn("Server died. Fixin' it.");
+					server = SimpleSmtpServer.start(25);
+				}
+			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException
+					| IOException e) {
+				log.error("Error checking server", e);
+			}
+
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
