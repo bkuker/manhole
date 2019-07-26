@@ -66,6 +66,7 @@ public class RestAPI {
 					throws IOException, JsonProcessingException {
 				jgen.writeStartObject();
 				jgen.writeStringField("id", URLEncoder.encode(email.getId(), "UTF-8"));
+				jgen.writeStringField("subject", email.getSubject());
 				jgen.writeStringField("from", email.getFromRecipient().getAddress());
 				jgen.writeObjectField("to", email.getRecipients().stream().map(r -> r.getAddress()));
 				jgen.writeStringField("body", email.getPlainText());

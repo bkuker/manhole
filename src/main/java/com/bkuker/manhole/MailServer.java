@@ -58,7 +58,7 @@ public class MailServer extends Thread implements SimpleMessageListener {
 	public void deliver(final String from, final String recipient, final InputStream data)
 			throws TooMuchDataException, IOException {
 		// Stolen from SubEthaSMTP Wiser
-		log.debug("Delivering mail from {} to {}", from, recipient);
+		log.info("Receiving mail from {} to {}", from, recipient);
 
 		Email email;
 		try {
