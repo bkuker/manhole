@@ -12,9 +12,9 @@
 	</parent>
 	<groupId>com.bkuker</groupId>
 	<artifactId>manhole</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>manhole</name>
-	<description>Demo project for Spring Boot</description>
+	<description>Manhole. It's a mail hole for your mail, man.</description>
 
 	<properties>
 		<java.version>1.8</java.version>
