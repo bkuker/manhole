@@ -1,85 +1,81 @@
 package com.bkuker.manhole;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.ServerSocket;
+import java.io.InputStream;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.MimeMessage;
 
+import org.simplejavamail.converter.EmailConverter;
+import org.simplejavamail.email.Email;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
-
-import com.dumbster.smtp.SimpleSmtpServer;
-import com.dumbster.smtp.SmtpMessage;
+import org.subethamail.smtp.TooMuchDataException;
+import org.subethamail.smtp.helper.SimpleMessageListener;
+import org.subethamail.smtp.helper.SimpleMessageListenerAdapter;
+import org.subethamail.smtp.server.SMTPServer;
 
 @Repository
-public class MailServer extends Thread {
+public class MailServer extends Thread implements SimpleMessageListener {
 
 	private final Logger log = LoggerFactory.getLogger(MailServer.class);
 	private final int LIMIT = 10;
 
-	private SimpleSmtpServer server;
+	private final SMTPServer server;
+	private final Session s = Session.getDefaultInstance(new Properties());
+	private final LinkedList<Email> messages = new LinkedList<>();
 
-	private final LinkedList<Message> messages = new LinkedList<>();
-
-	final Set<Consumer<Message>> listeners = new HashSet<>();
+	final Set<Consumer<Email>> listeners = new HashSet<>();
 
 	public MailServer() throws IOException {
 		setName("Mail Processing");
-		server = SimpleSmtpServer.start(25);
+		this.server = new SMTPServer(new SimpleMessageListenerAdapter(this));
+		this.server.setPort(25);
 	}
 
-	public synchronized void add(SmtpMessage s) {
-		Message m = new Message(s);
-		messages.add(m);
-		listeners.forEach(l -> l.accept(m));
+	@Override
+	@PostConstruct
+	public void start() {
+		this.server.start();
+	}
+
+	@Override
+	public boolean accept(final String from, final String recipient) {
+		log.debug("Accepting mail from {} to {}", from, recipient);
+		return true;
+	}
+
+	@Override
+	public void deliver(final String from, final String recipient, final InputStream data)
+			throws TooMuchDataException, IOException {
+		// Stolen from SubEthaSMTP Wiser
+		log.debug("Delivering mail from {} to {}", from, recipient);
+
+		Email email;
+		try {
+			email = EmailConverter.mimeMessageToEmail(new MimeMessage(s, data));
+		} catch (final MessagingException e) {
+			throw new IOException(e);
+		}
+
+		messages.add(email);
+		listeners.forEach(l -> l.accept(email));
 		if (messages.size() > LIMIT) {
 			messages.remove(0);
 		}
 	}
 
-	public Stream<Message> getMessages() {
+	public Stream<Email> getMessages() {
 		return messages.stream();
-	}
-
-	@PostConstruct
-	public void start() {
-		super.start();
-	}
-
-	public void run() {
-		while (true) {
-			for (SmtpMessage m : server.getReceivedEmails()) {
-				log.info("Received email {}", m);
-				add(m);
-			}
-			server.reset();
-
-			try {
-				Field f = server.getClass().getDeclaredField("serverSocket");
-				f.setAccessible(true);
-				ServerSocket ss = (ServerSocket) f.get(server);
-				if (ss.isClosed()) {
-					log.warn("Server died. Fixin' it.");
-					server = SimpleSmtpServer.start(25);
-				}
-			} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException
-					| IOException e) {
-				log.error("Error checking server", e);
-			}
-
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				log.error("Interrupted waiting for email!", e);
-			}
-		}
 	}
 
 }

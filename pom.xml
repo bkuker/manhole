@@ -27,9 +27,15 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.github.kirviq</groupId>
-			<artifactId>dumbster</artifactId>
-			<version>1.7.1</version>
+			<groupId>org.subethamail</groupId>
+			<artifactId>subethasmtp</artifactId>
+			<version>3.1.7</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.simplejavamail</groupId>
+			<artifactId>simple-java-mail</artifactId>
+			<version>5.2.0</version>
 		</dependency>
 
 		<dependency>
