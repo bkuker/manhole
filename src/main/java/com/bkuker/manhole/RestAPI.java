@@ -39,6 +39,12 @@ public class RestAPI {
 	ObjectMapper om;
 
 	private final Map<String, DeferredResult<Email>> waits = new HashMap<>();
+	
+	private String getId(Email m) {
+		if ( m.getId() != null )
+			return m.getId();
+		return "m-" + System.identityHashCode(m);
+	}
 
 	@PostConstruct
 	public void init() {
@@ -65,7 +71,7 @@ public class RestAPI {
 			public void serialize(final Email email, final JsonGenerator jgen, final SerializerProvider provider)
 					throws IOException, JsonProcessingException {
 				jgen.writeStartObject();
-				jgen.writeStringField("id", URLEncoder.encode(email.getId(), "UTF-8"));
+				jgen.writeStringField("id", URLEncoder.encode(getId(email), "UTF-8"));
 				jgen.writeStringField("subject", email.getSubject());
 				jgen.writeStringField("from", email.getFromRecipient().getAddress());
 				jgen.writeObjectField("to", email.getRecipients().stream().map(r -> r.getAddress()));
@@ -80,7 +86,7 @@ public class RestAPI {
 	@RequestMapping("/mail/{id}")
 	@ResponseBody
 	Email getMessage(@PathVariable final String id) throws UnsupportedEncodingException {
-		final Email e = mailServer.getMessages().filter(m -> m.getId().equals(id)).findFirst()
+		final Email e = mailServer.getMessages().filter(m -> getId(m).equals(id)).findFirst()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 		return e;
 	}
@@ -91,7 +97,7 @@ public class RestAPI {
 		return mailServer.getMessages().map(m -> {
 			try {
 				return ServletUriComponentsBuilder.fromCurrentServletMapping().path("/mail/{id}")
-						.buildAndExpand(URLEncoder.encode(m.getId(), "UTF-8")).toString();
+						.buildAndExpand(URLEncoder.encode(getId(m), "UTF-8")).toString();
 			} catch (final UnsupportedEncodingException e) {
 				throw new Error(e);
 			}
